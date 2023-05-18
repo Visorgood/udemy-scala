@@ -11,6 +11,8 @@ sealed abstract class RList[+T] {
   def apply(index: Int): T
   def length: Int
   def reverse: RList[T]
+  def ++[S >: T](anotherList: RList[S]): RList[S]
+  def removeAt(index: Int): RList[T]
 }
 
 case object RNil extends RList[Nothing] {
@@ -22,6 +24,8 @@ case object RNil extends RList[Nothing] {
   override def apply(index: Int): Nothing = throw new NoSuchElementException
   override def length: Int = 0
   override def reverse: RList[Nothing] = RNil
+  override def ++[S >: Nothing](anotherList: RList[S]): RList[S] = anotherList
+  override def removeAt(index: Int): RList[Nothing] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -68,6 +72,28 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     }
     applyTailrec(this, RNil)
   }
+
+  // if this has N elems, and anotherList has M elems -> complexity is O(N)
+  override def ++[S >: T](anotherList: RList[S]): RList[S] = {
+    @tailrec
+    def applyTailrec(remaining: RList[S], result: RList[S]): RList[S] = {
+      if (remaining.isEmpty) result
+      else applyTailrec(remaining.tail, remaining.head :: result)
+    }
+    applyTailrec(this.reverse, anotherList)
+  }
+
+  // O(N)
+  override def removeAt(index: Int): RList[T] = {
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[T], currentIndex: Int): RList[T] = {
+      if (remaining.isEmpty) acc.reverse
+      else if (currentIndex == index) acc.reverse ++ remaining.tail
+      else applyTailrec(remaining.tail, remaining.head :: acc, currentIndex + 1)
+    }
+    if (index < 0) this
+    else applyTailrec(this, RNil, 0)
+  }
 }
 
 object RList {
@@ -111,4 +137,14 @@ object ListProblems extends App {
   println(largeList.reverse)
   println(lst3.reverse)
 
+  println("++")
+  println(lst ++ largeList)
+  println(largeList ++ lst)
+
+  println("removeAt")
+  println(lst.removeAt(-1))
+  println(lst.removeAt(0))
+  println(lst.removeAt(3))
+  println(lst.removeAt(4))
+  println(lst.removeAt(10))
 }
