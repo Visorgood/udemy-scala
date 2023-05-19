@@ -13,6 +13,10 @@ sealed abstract class RList[+T] {
   def reverse: RList[T]
   def ++[S >: T](anotherList: RList[S]): RList[S]
   def removeAt(index: Int): RList[T]
+
+  def map[S](f: T => S): RList[S]
+  def flatMap[S](f: T => RList[S]): RList[S]
+  def filter(f: T => Boolean): RList[T]
 }
 
 case object RNil extends RList[Nothing] {
@@ -26,6 +30,10 @@ case object RNil extends RList[Nothing] {
   override def reverse: RList[Nothing] = RNil
   override def ++[S >: Nothing](anotherList: RList[S]): RList[S] = anotherList
   override def removeAt(index: Int): RList[Nothing] = RNil
+
+  override def map[S](f: Nothing => S): RList[S] = RNil
+  override def flatMap[S](f: Nothing => RList[S]): RList[S] = RNil
+  override def filter(f: Nothing => Boolean): RList[Nothing] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -94,6 +102,36 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     if (index < 0) this
     else applyTailrec(this, RNil, 0)
   }
+
+  // O(N)
+  override def map[S](f: T => S): RList[S] = {
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[S]): RList[S] = {
+      if (remaining.isEmpty) acc.reverse
+      else applyTailrec(remaining.tail, f(remaining.head) :: acc)
+    }
+    applyTailrec(this, RNil)
+  }
+
+  // O(M*M), where M is the length of the output list
+  override def flatMap[S](f: T => RList[S]): RList[S] = {
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[S]): RList[S] = {
+      if (remaining.isEmpty) acc
+      else applyTailrec(remaining.tail, acc ++ f(remaining.head))
+    }
+    applyTailrec(this, RNil)
+  }
+
+  // O(N)
+  override def filter(f: T => Boolean): RList[T] = {
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[T]): RList[T] = {
+      if (remaining.isEmpty) acc.reverse
+      else applyTailrec(remaining.tail, if (f(remaining.head)) remaining.head :: acc else acc)
+    }
+    applyTailrec(this, RNil)
+  }
 }
 
 object RList {
@@ -147,4 +185,16 @@ object ListProblems extends App {
   println(lst.removeAt(3))
   println(lst.removeAt(4))
   println(lst.removeAt(10))
+
+  println("map")
+  println(lst.map(_ * 3))
+  println(lst3.map(_ + 15))
+
+  println("filter")
+  println(lst.filter(_ % 2 == 0))
+  println(largeList.filter(_ % 17 == 5))
+
+  println("flatMap")
+  println(lst.flatMap(x => x*x :: x*x*x :: RNil))
+  println(lst3.flatMap(x => x * 2 :: x * 3 :: x * 4 :: RNil))
 }
