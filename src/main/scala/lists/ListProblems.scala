@@ -17,6 +17,9 @@ sealed abstract class RList[+T] {
   def map[S](f: T => S): RList[S]
   def flatMap[S](f: T => RList[S]): RList[S]
   def filter(f: T => Boolean): RList[T]
+
+  def rle: RList[(T, Int)]
+  def duplicateEach(k: Int): RList[T]
 }
 
 case object RNil extends RList[Nothing] {
@@ -34,6 +37,9 @@ case object RNil extends RList[Nothing] {
   override def map[S](f: Nothing => S): RList[S] = RNil
   override def flatMap[S](f: Nothing => RList[S]): RList[S] = RNil
   override def filter(f: Nothing => Boolean): RList[Nothing] = RNil
+
+  override def rle: RList[(Nothing, Int)] = RNil
+  override def duplicateEach(k: Int): RList[Nothing] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -132,6 +138,22 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     }
     applyTailrec(this, RNil)
   }
+
+  // O(N)
+  override def rle: RList[(T, Int)] = {
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[(T, Int)], curElem: T, curCount: Int): RList[(T, Int)] = {
+      if (remaining.isEmpty) ((curElem, curCount) :: acc).reverse
+      else if (curElem == remaining.head) applyTailrec(remaining.tail, acc, curElem, curCount + 1)
+      else applyTailrec(remaining.tail, (curElem, curCount) :: acc, remaining.head, 1)
+    }
+    applyTailrec(this.tail, RNil, this.head, 1)
+  }
+
+  // 
+  override def duplicateEach(k: Int): RList[T] = {
+    this.flatMap(elem => RList.from(Seq.fill(k)(elem)))
+  }
 }
 
 object RList {
@@ -157,6 +179,8 @@ object ListProblems extends App {
   println(lst2.toString)
   val lst3 = 9 :: RNil
   println(lst3.toString)
+  val lst4 = 1 :: 1 :: 1 :: 2 :: 3 :: 3 :: 4 :: 4 :: 4 :: 4 :: 5 :: RNil
+  println(lst4.toString)
 
   println("Access by index")
 //  println(lst(-5))
@@ -197,4 +221,10 @@ object ListProblems extends App {
   println("flatMap")
   println(lst.flatMap(x => x*x :: x*x*x :: RNil))
   println(lst3.flatMap(x => x * 2 :: x * 3 :: x * 4 :: RNil))
+
+  println("rle")
+  println(lst4.rle)
+
+  println("duplicateEach")
+  println(lst.duplicateEach(3))
 }
