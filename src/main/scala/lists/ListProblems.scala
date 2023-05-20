@@ -164,9 +164,9 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
       if (rotationsLeft == 0) remaining ++ acc.reverse
       else applyTailrec(remaining.tail, remaining.head :: acc, rotationsLeft - 1)
     }
-    val l = this.length
-    if (k == l) this
-    else applyTailrec(this, RNil, k % l)
+    val rotationsCount = k % this.length
+    if (rotationsCount == 0) this
+    else applyTailrec(this, RNil, rotationsCount)
   }
 }
 
