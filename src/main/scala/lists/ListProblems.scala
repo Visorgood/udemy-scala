@@ -20,6 +20,7 @@ sealed abstract class RList[+T] {
 
   def rle: RList[(T, Int)]
   def duplicateEach(k: Int): RList[T]
+  def rotate(k: Int): RList[T]
 }
 
 case object RNil extends RList[Nothing] {
@@ -40,6 +41,7 @@ case object RNil extends RList[Nothing] {
 
   override def rle: RList[(Nothing, Int)] = RNil
   override def duplicateEach(k: Int): RList[Nothing] = RNil
+  override def rotate(k: Int): RList[Nothing] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -154,6 +156,18 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
   override def duplicateEach(k: Int): RList[T] = {
     this.flatMap(elem => RList.from(Seq.fill(k)(elem)))
   }
+
+  // O(N + (k % N) * 2) = O(N + N * 2) = O(N)
+  override def rotate(k: Int): RList[T] = {
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[T], rotationsLeft: Int): RList[T] = {
+      if (rotationsLeft == 0) remaining ++ acc.reverse
+      else applyTailrec(remaining.tail, remaining.head :: acc, rotationsLeft - 1)
+    }
+    val l = this.length
+    if (k == l) this
+    else applyTailrec(this, RNil, k % l)
+  }
 }
 
 object RList {
@@ -227,4 +241,12 @@ object ListProblems extends App {
 
   println("duplicateEach")
   println(lst.duplicateEach(3))
+
+  println("rotate")
+  println(lst.rotate(0))
+  println(lst.rotate(2))
+  println(lst.rotate(5))
+  println(lst.rotate(8))
+  println(lst.rotate(12))
+  println(largeList.rotate(15))
 }
