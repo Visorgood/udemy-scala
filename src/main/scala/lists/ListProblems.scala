@@ -24,7 +24,8 @@ sealed abstract class RList[+T] {
   def rotate(k: Int): RList[T]
   def sample(k: Int): RList[T]
 
-  def sorted[S >: T](ordering: Ordering[S]): RList[S]
+  def insertionSort[S >: T](ordering: Ordering[S]): RList[S]
+  def mergeSort[S >: T](ordering: Ordering[S]): RList[S]
 }
 
 case object RNil extends RList[Nothing] {
@@ -48,7 +49,8 @@ case object RNil extends RList[Nothing] {
   override def rotate(k: Int): RList[Nothing] = RNil
   override def sample(k: Int): RList[Nothing] = RNil
 
-  override def sorted[S >: Nothing](ordering: Ordering[S]): RList[S] = RNil
+  override def insertionSort[S >: Nothing](ordering: Ordering[S]): RList[S] = RNil
+  override def mergeSort[S >: Nothing](ordering: Ordering[S]): RList[S] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -159,7 +161,7 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     applyTailrec(this.tail, RNil, this.head, 1)
   }
 
-  // 
+  //
   override def duplicateEach(k: Int): RList[T] = {
     this.flatMap(elem => RList.from(Seq.fill(k)(elem)))
   }
@@ -192,7 +194,7 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
   }
 
   // O(N*N)
-  override def sorted[S >: T](ordering: Ordering[S]): RList[S] = {
+  override def insertionSort[S >: T](ordering: Ordering[S]): RList[S] = {
     @tailrec
     def insert(remaining: RList[S], res: RList[S], elem: S): RList[S] = {
       if (remaining.isEmpty) res.reverse ++ (elem :: RNil)
@@ -205,6 +207,29 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
       else applyTailrec(remaining.tail, insert(acc, RNil, remaining.head))
     }
     applyTailrec(this, RNil)
+  }
+
+  override def mergeSort[S >: T](ordering: Ordering[S]): RList[S] = {
+    @tailrec
+    def merge(lst1: RList[S], lst2: RList[S], acc: RList[S]): RList[S] = {
+      if (lst1.isEmpty && lst2.isEmpty) acc.reverse
+      else if (lst1.isEmpty) acc.reverse ++ lst2
+      else if (lst2.isEmpty) acc.reverse ++ lst1
+      else if (ordering.lteq(lst1.head, lst2.head)) merge(lst1.tail, lst2, lst1.head :: acc)
+      else merge(lst1, lst2.tail, lst2.head :: acc)
+    }
+    @tailrec
+    def applyTailrec(remaining: RList[RList[S]], acc: RList[RList[S]]): RList[RList[S]] = {
+      if (remaining.isEmpty) {
+        if (acc.length == 1) acc
+        else applyTailrec(acc.reverse, RNil)
+      }
+      else {
+        if (remaining.tail.isEmpty) applyTailrec(remaining.tail, remaining.head :: acc)
+        else applyTailrec(remaining.tail.tail, merge(remaining.head, remaining.tail.head, RNil) :: acc)
+      }
+    }
+    applyTailrec(this.map(_ :: RNil), RNil).head
   }
 }
 
@@ -301,5 +326,7 @@ object ListProblems extends App {
 
   println("sorted")
   val randomList = RList.from(Random.shuffle((1 to 100).toList))
-  println((randomList ++ randomList).sorted(Ordering.Int))
+  println(randomList)
+  println((randomList ++ randomList).insertionSort(Ordering.Int))
+  println((randomList ++ randomList).mergeSort(Ordering.Int))
 }
