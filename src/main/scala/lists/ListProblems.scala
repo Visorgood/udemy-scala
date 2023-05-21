@@ -26,6 +26,7 @@ sealed abstract class RList[+T] {
 
   def insertionSort[S >: T](ordering: Ordering[S]): RList[S]
   def mergeSort[S >: T](ordering: Ordering[S]): RList[S]
+  def quickSort[S >: T](ordering: Ordering[S]): RList[S]
 }
 
 case object RNil extends RList[Nothing] {
@@ -51,6 +52,7 @@ case object RNil extends RList[Nothing] {
 
   override def insertionSort[S >: Nothing](ordering: Ordering[S]): RList[S] = RNil
   override def mergeSort[S >: Nothing](ordering: Ordering[S]): RList[S] = RNil
+  override def quickSort[S >: Nothing](ordering: Ordering[S]): RList[S] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -209,15 +211,16 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     applyTailrec(this, RNil)
   }
 
+  @tailrec
+  private def merge[S](lst1: RList[S], lst2: RList[S], acc: RList[S])(ordering: Ordering[S]): RList[S] = {
+    if (lst1.isEmpty && lst2.isEmpty) acc.reverse
+    else if (lst1.isEmpty) acc.reverse ++ lst2
+    else if (lst2.isEmpty) acc.reverse ++ lst1
+    else if (ordering.lteq(lst1.head, lst2.head)) merge(lst1.tail, lst2, lst1.head :: acc)(ordering)
+    else merge(lst1, lst2.tail, lst2.head :: acc)(ordering)
+  }
+
   override def mergeSort[S >: T](ordering: Ordering[S]): RList[S] = {
-    @tailrec
-    def merge(lst1: RList[S], lst2: RList[S], acc: RList[S]): RList[S] = {
-      if (lst1.isEmpty && lst2.isEmpty) acc.reverse
-      else if (lst1.isEmpty) acc.reverse ++ lst2
-      else if (lst2.isEmpty) acc.reverse ++ lst1
-      else if (ordering.lteq(lst1.head, lst2.head)) merge(lst1.tail, lst2, lst1.head :: acc)
-      else merge(lst1, lst2.tail, lst2.head :: acc)
-    }
     @tailrec
     def applyTailrec(remaining: RList[RList[S]], acc: RList[RList[S]]): RList[RList[S]] = {
       if (remaining.isEmpty) {
@@ -226,10 +229,35 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
       }
       else {
         if (remaining.tail.isEmpty) applyTailrec(remaining.tail, remaining.head :: acc)
-        else applyTailrec(remaining.tail.tail, merge(remaining.head, remaining.tail.head, RNil) :: acc)
+        else applyTailrec(remaining.tail.tail, merge(remaining.head, remaining.tail.head, RNil)(ordering) :: acc)
       }
     }
     applyTailrec(this.map(_ :: RNil), RNil).head
+  }
+
+  override def quickSort[S >: T](ordering: Ordering[S]): RList[S] = {
+    @tailrec
+    def splitByPivot(remaining: RList[S], acc1: RList[S], acc2: RList[S], pivot: S): (RList[S], RList[S]) = {
+      if (remaining.isEmpty) (acc1, acc2)
+      else if (ordering.lteq(remaining.head, pivot)) splitByPivot(remaining.tail, remaining.head :: acc1, acc2, pivot)
+      else splitByPivot(remaining.tail, acc1, remaining.head :: acc2, pivot)
+    }
+    @tailrec
+    def applyTailrec(remaining: RList[RList[S]], acc: RList[RList[S]], allListsAreDone: Boolean): RList[RList[S]] = {
+      if (remaining.isEmpty) {
+        if (allListsAreDone) acc.reverse
+        else applyTailrec(acc.reverse, RNil, true)
+      }
+      else {
+        if (remaining.head.isEmpty) applyTailrec(remaining.tail, acc, allListsAreDone)
+        else {
+          val pivot = remaining.head.head
+          val (lst1, lst2) = splitByPivot(remaining.head.tail, RNil, RNil, pivot)
+          applyTailrec(remaining.tail, lst2 :: (pivot :: RNil) :: lst1 :: acc, allListsAreDone && lst1.length <= 1 && lst2.length <= 1)
+        }
+      }
+    }
+    applyTailrec(this :: RNil, RNil, true).flatMap(lst => lst)
   }
 }
 
@@ -324,9 +352,14 @@ object ListProblems extends App {
   println(lst.sample(15))
   println(largeList.sample(10))
 
-  println("sorted")
+  println("sortings")
   val randomList = RList.from(Random.shuffle((1 to 100).toList))
-  println(randomList)
-  println((randomList ++ randomList).insertionSort(Ordering.Int))
-  println((randomList ++ randomList).mergeSort(Ordering.Int))
+  val randomListDoubled = randomList ++ randomList
+  println(randomListDoubled)
+  println("insertion sort")
+  println(randomListDoubled.insertionSort(Ordering.Int))
+  println("merge sort")
+  println(randomListDoubled.mergeSort(Ordering.Int))
+  println("quick sort")
+  println(randomListDoubled.quickSort(Ordering.Int))
 }
