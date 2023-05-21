@@ -23,6 +23,8 @@ sealed abstract class RList[+T] {
   def duplicateEach(k: Int): RList[T]
   def rotate(k: Int): RList[T]
   def sample(k: Int): RList[T]
+
+  def sorted[S >: T](ordering: Ordering[S]): RList[S]
 }
 
 case object RNil extends RList[Nothing] {
@@ -45,6 +47,8 @@ case object RNil extends RList[Nothing] {
   override def duplicateEach(k: Int): RList[Nothing] = RNil
   override def rotate(k: Int): RList[Nothing] = RNil
   override def sample(k: Int): RList[Nothing] = RNil
+
+  override def sorted[S >: Nothing](ordering: Ordering[S]): RList[S] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -124,12 +128,12 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     applyTailrec(this, RNil)
   }
 
-  // O(M*M), where M is the length of the output list
+  // O(N + 2*M + M) = O(N + M), where N is the length of the input list and M is the length of the output list
   override def flatMap[S](f: T => RList[S]): RList[S] = {
     @tailrec
     def applyTailrec(remaining: RList[T], acc: RList[S]): RList[S] = {
-      if (remaining.isEmpty) acc
-      else applyTailrec(remaining.tail, acc ++ f(remaining.head))
+      if (remaining.isEmpty) acc.reverse
+      else applyTailrec(remaining.tail, f(remaining.head).reverse ++ acc)
     }
     applyTailrec(this, RNil)
   }
@@ -185,6 +189,22 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     if (k <= 0) RNil
     else if (k >= N) this
     else applyTailrec(this, RNil, 0, allIndices)
+  }
+
+  // O(N*N)
+  override def sorted[S >: T](ordering: Ordering[S]): RList[S] = {
+    @tailrec
+    def insert(remaining: RList[S], res: RList[S], elem: S): RList[S] = {
+      if (remaining.isEmpty) res.reverse ++ (elem :: RNil)
+      else if (ordering.lteq(elem, remaining.head)) res.reverse ++ (elem :: remaining)
+      else insert(remaining.tail, remaining.head :: res, elem)
+    }
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[S]): RList[S] = {
+      if (remaining.isEmpty) acc
+      else applyTailrec(remaining.tail, insert(acc, RNil, remaining.head))
+    }
+    applyTailrec(this, RNil)
   }
 }
 
@@ -253,6 +273,9 @@ object ListProblems extends App {
   println("flatMap")
   println(lst.flatMap(x => x*x :: x*x*x :: RNil))
   println(lst3.flatMap(x => x * 2 :: x * 3 :: x * 4 :: RNil))
+  val time = System.currentTimeMillis()
+  RList.from(1 to 10000).flatMap(x => x :: (2 * x) :: RNil)
+  println(System.currentTimeMillis() - time)
 
   println("rle")
   println(lst4.rle)
@@ -275,4 +298,8 @@ object ListProblems extends App {
   println(lst.sample(3))
   println(lst.sample(15))
   println(largeList.sample(10))
+
+  println("sorted")
+  val randomList = RList.from(Random.shuffle((1 to 100).toList))
+  println((randomList ++ randomList).sorted(Ordering.Int))
 }
