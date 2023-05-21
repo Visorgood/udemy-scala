@@ -1,6 +1,7 @@
 package lists
 
 import scala.annotation.tailrec
+import scala.util.Random
 
 sealed abstract class RList[+T] {
   def head: T
@@ -21,6 +22,7 @@ sealed abstract class RList[+T] {
   def rle: RList[(T, Int)]
   def duplicateEach(k: Int): RList[T]
   def rotate(k: Int): RList[T]
+  def sample(k: Int): RList[T]
 }
 
 case object RNil extends RList[Nothing] {
@@ -42,6 +44,7 @@ case object RNil extends RList[Nothing] {
   override def rle: RList[(Nothing, Int)] = RNil
   override def duplicateEach(k: Int): RList[Nothing] = RNil
   override def rotate(k: Int): RList[Nothing] = RNil
+  override def sample(k: Int): RList[Nothing] = RNil
 }
 
 case class ::[+T](override val head: T, override val tail: RList[T]) extends RList[T] {
@@ -168,6 +171,21 @@ case class ::[+T](override val head: T, override val tail: RList[T]) extends RLi
     if (rotationsCount == 0) this
     else applyTailrec(this, RNil, rotationsCount)
   }
+
+  // O(N + N + K + K*log(K) + N) = O(N)
+  override def sample(k: Int): RList[T] = {
+    val N = this.length
+    val allIndices = RList.from(Random.shuffle((0 until N).toList).take(k).sorted)
+    @tailrec
+    def applyTailrec(remaining: RList[T], acc: RList[T], currentIndex: Int, remainingIndices: RList[Int]): RList[T] = {
+      if (remainingIndices.isEmpty) acc.reverse
+      else if (currentIndex < remainingIndices.head) applyTailrec(remaining.tail, acc, currentIndex + 1, remainingIndices)
+      else applyTailrec(remaining.tail, remaining.head :: acc, currentIndex + 1, remainingIndices.tail)
+    }
+    if (k <= 0) RNil
+    else if (k >= N) this
+    else applyTailrec(this, RNil, 0, allIndices)
+  }
 }
 
 object RList {
@@ -249,4 +267,12 @@ object ListProblems extends App {
   println(lst.rotate(8))
   println(lst.rotate(12))
   println(largeList.rotate(15))
+
+  println("sample")
+  println(lst.sample(-2))
+  println(lst.sample(0))
+  println(lst.sample(1))
+  println(lst.sample(3))
+  println(lst.sample(15))
+  println(largeList.sample(10))
 }
