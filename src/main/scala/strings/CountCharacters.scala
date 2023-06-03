@@ -1,8 +1,11 @@
 package strings
 
+import scala.annotation.tailrec
+
 object CountCharacters extends App {
 
   def countCharacters(s: String): Map[Char, Int] = {
+    @tailrec
     def countTailrec(remaining: String, acc: Map[Char, Int]): Map[Char, Int] = {
       if (remaining.isEmpty) acc
       else {
