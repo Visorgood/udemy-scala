@@ -18,15 +18,26 @@ object Parenthesis extends App {
     applyTailrec(s, List.empty[Char])
   }
 
-  println(hasValidParentheses("()"))
-  println(hasValidParentheses("()()"))
-  println(hasValidParentheses("(())"))
-  println(hasValidParentheses("(()())"))
-  println(hasValidParentheses(")"))
-  println(hasValidParentheses("("))
-  println(hasValidParentheses(")("))
-  println(hasValidParentheses("()("))
-  println(hasValidParentheses("())"))
-  println(hasValidParentheses("(()"))
-  println(hasValidParentheses(")()"))
+  def generateAllValidParentheses(n: Int): List[String] = {
+    @tailrec
+    def addNewParentheses(remaining: Set[String], newAcc: Set[String]): Set[String] = {
+      if (remaining.isEmpty) newAcc
+      else {
+        val rs = remaining.head
+        addNewParentheses(remaining.tail, newAcc ++ Set(rs + "()", "()" + rs, "(" + rs + ")"))
+      }
+    }
+    @tailrec
+    def applyTailrec(k: Int, acc: Set[String]): Set[String] = {
+      if (k == n) acc
+      else applyTailrec(k + 1, addNewParentheses(acc, Set.empty[String]))
+    }
+    applyTailrec(1, Set("()")).toList
+  }
+
+  println("hasValidParentheses")
+  List("()", "()()", "(())", "(()())", ")", "(", ")(", "()(", "())", "(()", ")()").foreach(s => println(hasValidParentheses(s)))
+
+  println("generateAllValidParentheses")
+  (1 to 5).foreach(n => println(generateAllValidParentheses(n)))
 }
