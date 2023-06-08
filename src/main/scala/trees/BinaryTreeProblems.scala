@@ -13,6 +13,7 @@ sealed abstract class BTree[+T] {
   def leafCount: Int
   val size: Int
   def collectNodes(level: Int): List[BTree[T]]
+  def mirror: BTree[T]
 }
 case object BEnd extends BTree[Nothing] {
   override def value: Nothing = throw new NoSuchElementException
@@ -25,6 +26,7 @@ case object BEnd extends BTree[Nothing] {
   override def leafCount: Int = 0
   override val size: Int = 0
   override def collectNodes(level: Int): List[BTree[Nothing]] = List.empty
+  override def mirror: BTree[Nothing] = this
 }
 case class BNode[+T](override val value: T, override val left: BTree[T], override val right: BTree[T]) extends BTree[T] {
   override def isEmpty: Boolean = false
@@ -57,6 +59,16 @@ case class BNode[+T](override val value: T, override val left: BTree[T], overrid
     }
     collect(List(NodeWithLevel(this, level)), List.empty)
   }
+  override def mirror: BTree[T] = {
+    @tailrec
+    def collect(todo: List[BTree[T]], visited: Set[BTree[T]], done: List[BTree[T]]): BTree[T] = {
+      if (todo.isEmpty) done.head
+      else if (todo.head.isEmpty || todo.head.isLeaf) collect(todo.tail, visited, todo.head :: done)
+      else if (!visited.contains(todo.head)) collect(todo.head.left :: todo.head.right :: todo, visited + todo.head, done)
+      else collect(todo.tail, visited, BNode(todo.head.value, done.head, done.tail.head) :: done.tail.tail)
+    }
+    collect(List(this), Set.empty, List.empty)
+  }
 }
 
 object BinaryTreeProblems extends App {
@@ -77,4 +89,5 @@ object BinaryTreeProblems extends App {
   println(tree.collectLeaves.map(_.value))
   println(tree.size)
   (0 to 4).foreach(n => println(tree.collectNodes(n).map(_.value)))
+  println(tree.mirror)
 }
