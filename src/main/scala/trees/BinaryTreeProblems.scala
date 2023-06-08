@@ -12,6 +12,7 @@ sealed abstract class BTree[+T] {
   def collectLeaves: List[BTree[T]]
   def leafCount: Int
   val size: Int
+  def collectNodes(level: Int): List[BTree[T]]
 }
 case object BEnd extends BTree[Nothing] {
   override def value: Nothing = throw new NoSuchElementException
@@ -23,6 +24,7 @@ case object BEnd extends BTree[Nothing] {
   override def collectLeaves: List[BTree[Nothing]] = List.empty
   override def leafCount: Int = 0
   override val size: Int = 0
+  override def collectNodes(level: Int): List[BTree[Nothing]] = List.empty
 }
 case class BNode[+T](override val value: T, override val left: BTree[T], override val right: BTree[T]) extends BTree[T] {
   override def isEmpty: Boolean = false
@@ -39,6 +41,22 @@ case class BNode[+T](override val value: T, override val left: BTree[T], overrid
   }
   override def leafCount: Int = collectLeaves.length
   override val size: Int = 1 + left.size + right.size
+  override def collectNodes(level: Int): List[BTree[T]] = {
+    case class NodeWithLevel(node: BTree[T], level: Int)
+    @tailrec
+    def collect(todo: List[NodeWithLevel], leaves: List[BTree[T]]): List[BTree[T]] = {
+      if (todo.isEmpty) leaves
+      else if (todo.head.node.isEmpty) collect(todo.tail, leaves)
+      else if (todo.head.level == 0) collect(todo.tail, todo.head.node :: leaves)
+      else {
+        val leftNode = NodeWithLevel(todo.head.node.left, todo.head.level - 1)
+        val rightNode = NodeWithLevel(todo.head.node.right, todo.head.level - 1)
+        val newTodo = leftNode :: rightNode :: todo.tail
+        collect(newTodo, leaves)
+      }
+    }
+    collect(List(NodeWithLevel(this, level)), List.empty)
+  }
 }
 
 object BinaryTreeProblems extends App {
@@ -58,4 +76,5 @@ object BinaryTreeProblems extends App {
 
   println(tree.collectLeaves.map(_.value))
   println(tree.size)
+  (0 to 4).foreach(n => println(tree.collectNodes(n).map(_.value)))
 }
