@@ -14,6 +14,8 @@ sealed abstract class BTree[+T] {
   val size: Int
   def collectNodes(level: Int): List[BTree[T]]
   def mirror: BTree[T]
+  def sameShapeAs[S >: T](that: BTree[S]): Boolean
+  def isSymmetrical: Boolean
 }
 case object BEnd extends BTree[Nothing] {
   override def value: Nothing = throw new NoSuchElementException
@@ -27,6 +29,8 @@ case object BEnd extends BTree[Nothing] {
   override val size: Int = 0
   override def collectNodes(level: Int): List[BTree[Nothing]] = List.empty
   override def mirror: BTree[Nothing] = this
+  override def sameShapeAs[S >: Nothing](that: BTree[S]): Boolean = that.isEmpty
+  override def isSymmetrical: Boolean = true
 }
 case class BNode[+T](override val value: T, override val left: BTree[T], override val right: BTree[T]) extends BTree[T] {
   override def isEmpty: Boolean = false
@@ -69,6 +73,24 @@ case class BNode[+T](override val value: T, override val left: BTree[T], overrid
     }
     collect(List(this), Set.empty, List.empty)
   }
+  override def sameShapeAs[S >: T](that: BTree[S]): Boolean = {
+    @tailrec
+    def compare(todo1: List[BTree[S]], todo2: List[BTree[S]]): Boolean = {
+      if (todo1.isEmpty && todo2.isEmpty) true
+      else if (todo1.isEmpty && todo2.nonEmpty || todo1.nonEmpty && todo2.isEmpty) false
+      else {
+        val h1 = todo1.head
+        val h2 = todo2.head
+        if (h1.isEmpty && h2.isEmpty) compare(todo1.tail, todo2.tail)
+        else if (h1.isEmpty && !h2.isEmpty || !h1.isEmpty && h2.isEmpty) false
+        else if (h1.isLeaf && h2.isLeaf) compare(todo1.tail, todo2.tail)
+        else if (h1.isLeaf && !h2.isLeaf || !h1.isLeaf && h2.isLeaf) false
+        else compare(h1.left :: h1.right :: todo1.tail, h2.left :: h2.right :: todo2.tail)
+      }
+    }
+    compare(List(this), List(that))
+  }
+  override def isSymmetrical: Boolean = this.sameShapeAs(this.mirror)
 }
 
 object BinaryTreeProblems extends App {
@@ -85,9 +107,26 @@ object BinaryTreeProblems extends App {
       BNode(8, BEnd, BEnd)
     )
   )
+  val otherTree = BNode(7,
+    BNode(15,
+      BNode(2, BEnd, BEnd),
+      BNode(9,
+        BEnd,
+        BNode(5, BEnd, BEnd)
+      )
+    ),
+    BNode(1,
+      BNode(6, BEnd, BEnd),
+      BNode(4, BEnd, BEnd)
+    )
+  )
 
   println(tree.collectLeaves.map(_.value))
   println(tree.size)
   (0 to 4).foreach(n => println(tree.collectNodes(n).map(_.value)))
   println(tree.mirror)
+  println(tree.sameShapeAs(otherTree))
+  println(tree.sameShapeAs(otherTree.right))
+  println(tree.isSymmetrical)
+  println(tree.right.isSymmetrical)
 }
