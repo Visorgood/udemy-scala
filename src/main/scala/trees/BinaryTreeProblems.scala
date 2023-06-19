@@ -106,6 +106,7 @@ case class BNode[+T](override val value: T, override val left: BTree[T], overrid
 }
 
 object BinaryTreeProblems extends App {
+
   val tree =
     BNode(1,
       BNode(2,
@@ -145,4 +146,30 @@ object BinaryTreeProblems extends App {
   println(tree.right.isSymmetrical)
   println(tree.toList)
   println(otherTree.toList)
+
+  def hasPathSumStackRec(tree: BTree[Int], target: Int): Boolean = {
+    if (target < 0) false
+    else if (tree.isLeaf) tree.value == target
+    else !tree.left.isEmpty && hasPathSumStackRec(tree.left, target - tree.value) || !tree.right.isEmpty && hasPathSumStackRec(tree.right, target - tree.value)
+  }
+  println("hasPathSumStackRec")
+  List(6, 7, 12, 15, 16).foreach(x => println(hasPathSumStackRec(tree, x)))
+
+  def hasPathSumTailRec(tree: BTree[Int], target: Int): Boolean = {
+    case class NodeWithTarget(node: BTree[Int], target: Int)
+    @tailrec
+    def traverse(todo: List[NodeWithTarget]): Boolean = {
+      if (todo.isEmpty) false
+      else {
+        val n = todo.head.node
+        val t = todo.head.target
+        if (n.isEmpty || t < 0) traverse(todo.tail)
+        else if (n.isLeaf && n.value == t) true
+        else traverse(NodeWithTarget(n.left, t - n.value) :: NodeWithTarget(n.right, t - n.value) :: todo.tail)
+      }
+    }
+    traverse(List(NodeWithTarget(tree, target)))
+  }
+  println("hasPathSumTailRec")
+  List(6, 7, 12, 15, 16).foreach(x => println(hasPathSumTailRec(tree, x)))
 }
