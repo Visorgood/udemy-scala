@@ -16,6 +16,7 @@ sealed abstract class BTree[+T] {
   def mirror: BTree[T]
   def sameShapeAs[S >: T](that: BTree[S]): Boolean
   def isSymmetrical: Boolean
+  def toList: List[T]
 }
 case object BEnd extends BTree[Nothing] {
   override def value: Nothing = throw new NoSuchElementException
@@ -31,6 +32,7 @@ case object BEnd extends BTree[Nothing] {
   override def mirror: BTree[Nothing] = this
   override def sameShapeAs[S >: Nothing](that: BTree[S]): Boolean = that.isEmpty
   override def isSymmetrical: Boolean = true
+  override def toList: List[Nothing] = List.empty
 }
 case class BNode[+T](override val value: T, override val left: BTree[T], override val right: BTree[T]) extends BTree[T] {
   override def isEmpty: Boolean = false
@@ -91,35 +93,47 @@ case class BNode[+T](override val value: T, override val left: BTree[T], overrid
     compare(List(this), List(that))
   }
   override def isSymmetrical: Boolean = this.sameShapeAs(this.mirror)
+  override def toList: List[T] = {
+    @tailrec
+    def collect(todo: List[BTree[T]], acc: List[T]): List[T] = {
+      if (todo.isEmpty) acc.reverse
+      else if (todo.head.isEmpty) collect(todo.tail, acc)
+      else if (todo.head.isLeaf) collect(todo.tail, todo.head.value :: acc)
+      else collect(todo.head.left :: todo.head.right :: todo.tail, todo.head.value :: acc)
+    }
+    collect(List(this), List.empty)
+  }
 }
 
 object BinaryTreeProblems extends App {
-  val tree = BNode(1,
-    BNode(2,
-      BNode(3, BEnd, BEnd),
-      BNode(4,
-        BEnd,
-        BNode(5, BEnd, BEnd)
-      )
-    ),
-    BNode(6,
-      BNode(7, BEnd, BEnd),
-      BNode(8, BEnd, BEnd)
-    )
-  )
-  val otherTree = BNode(7,
-    BNode(15,
-      BNode(2, BEnd, BEnd),
-      BNode(9,
-        BEnd,
-        BNode(5, BEnd, BEnd)
-      )
-    ),
+  val tree =
     BNode(1,
-      BNode(6, BEnd, BEnd),
-      BNode(4, BEnd, BEnd)
+      BNode(2,
+        BNode(3, BEnd, BEnd),
+        BNode(4,
+          BEnd,
+          BNode(5, BEnd, BEnd)
+        )
+      ),
+      BNode(6,
+        BNode(7, BEnd, BEnd),
+        BNode(8, BEnd, BEnd)
+      )
     )
-  )
+  val otherTree =
+    BNode(7,
+      BNode(15,
+        BNode(2, BEnd, BEnd),
+        BNode(9,
+          BEnd,
+          BNode(5, BEnd, BEnd)
+        )
+      ),
+      BNode(1,
+        BNode(6, BEnd, BEnd),
+        BNode(4, BEnd, BEnd)
+      )
+    )
 
   println(tree.collectLeaves.map(_.value))
   println(tree.size)
@@ -129,4 +143,6 @@ object BinaryTreeProblems extends App {
   println(tree.sameShapeAs(otherTree.right))
   println(tree.isSymmetrical)
   println(tree.right.isSymmetrical)
+  println(tree.toList)
+  println(otherTree.toList)
 }
