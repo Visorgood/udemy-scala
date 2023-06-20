@@ -172,4 +172,66 @@ object BinaryTreeProblems extends App {
   }
   println("hasPathSumTailRec")
   List(6, 7, 12, 15, 16).foreach(x => println(hasPathSumTailRec(tree, x)))
+
+
+  def cameraSurveillance[T](tree: BTree[T]): Int = {
+    def cameraSurveillanceRec(node: BTree[T], cameraAboveOn: Boolean, cameraAboveCovered: Boolean): Int = {
+      if (node.isEmpty) 0
+      else if (node.isLeaf) {
+        if (cameraAboveOn) 0
+        else 1
+      }
+      else {
+        if (cameraAboveOn || cameraAboveCovered)
+          math.min(
+            cameraSurveillanceRec(node.left, true, true) + cameraSurveillanceRec(node.right, true, true) + 1,
+            cameraSurveillanceRec(node.left, false, cameraAboveOn) + cameraSurveillanceRec(node.right, false, cameraAboveOn)
+          )
+        else
+          cameraSurveillanceRec(node.left, true, true) + cameraSurveillanceRec(node.right, true, true) + 1
+      }
+    }
+    cameraSurveillanceRec(tree, false, true)
+  }
+
+  val smallerTree =
+    BNode(1,
+      BNode(2,
+        BNode(4, BEnd, BEnd),
+        BEnd
+      ),
+      BNode(3, BEnd, BEnd)
+    )
+  val biggerTree =
+    BNode(1,
+      BNode(2,
+        BNode(4,
+          BNode(8,
+            BNode(14, BEnd, BEnd),
+            BEnd
+          ),
+          BNode(9, BEnd, BEnd)
+        ),
+        BNode(5,
+          BEnd,
+          BNode(10, BEnd, BEnd)
+        )
+      ),
+      BNode(3,
+        BNode(6,
+          BNode(11, BEnd, BEnd),
+          BNode(12,
+            BEnd,
+            BNode(15, BEnd, BEnd)
+          )
+        ),
+        BNode(7,
+          BEnd,
+          BNode(13, BEnd, BEnd)
+        )
+      )
+    )
+  println("cameraSurveillance")
+  println(cameraSurveillance(smallerTree))
+  println(cameraSurveillance(biggerTree))
 }
