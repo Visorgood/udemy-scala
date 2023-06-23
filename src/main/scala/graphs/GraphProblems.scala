@@ -40,6 +40,17 @@ object GraphProblems extends App {
     else findPathTailrec(List(start), Set.empty, List.empty)
   }
 
+  def makeUndirected[T](graph: Graph[T]): Graph[T] = {
+    graph.foldLeft[Graph[T]](graph) {
+      case (newGraph: Graph[T], (name: T, friends: Set[T])) =>
+        friends.foldLeft[Graph[T]](newGraph) {
+          case (ng: Graph[T], friend: T) =>
+            val newSet = ng.getOrElse(friend, Set.empty) + name
+            ng + (friend -> newSet)
+        }
+    }
+  }
+
   val socialNetwork: Graph[String] = Map(
     "Alice" -> Set("Bob", "Charlie", "David"),
     "Bob" -> Set(),
@@ -65,4 +76,7 @@ object GraphProblems extends App {
   println(findPath(socialNetwork, "Bob", "David"))
   println(findPath(socialNetwork, "Alice", "Tom"))
   println(findPath(socialNetwork, "Tom", "Alice"))
+
+  println("makeUndirected")
+  println(makeUndirected(socialNetwork))
 }
