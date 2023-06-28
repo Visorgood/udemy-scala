@@ -51,6 +51,31 @@ object GraphProblems extends App {
     }
   }
 
+  def color[T](graph: Graph[T]): Map[T, Int] = {
+    val uniGraph = makeUndirected(graph)
+
+    @tailrec
+    def colorTailrec(todo: List[T], curColor: Int, colorings: Map[T, Int]): Map[T, Int] = {
+      if (todo.isEmpty) colorings
+      else if (colorings.contains(todo.head)) colorTailrec(todo.tail, curColor, colorings)
+      else {
+        val uncoloredNodes = todo.tail.foldLeft(Set(todo.head)) { (nodesToBeColored, n) =>
+          val allNeighbors = nodesToBeColored.flatMap(nodeToBeColored => uniGraph(nodeToBeColored))
+          if (colorings.contains(n) || allNeighbors.contains(n)) nodesToBeColored
+          else nodesToBeColored + n
+        }
+        val newColorings = colorings ++ uncoloredNodes.map(_ -> curColor).toMap
+        colorTailrec(todo.tail, curColor + 1, newColorings)
+      }
+    }
+
+    colorTailrec(
+      todo = uniGraph.keySet.toList.sortWith((a, b) => outDegree(uniGraph, a) > outDegree(uniGraph, b)),
+      curColor = 0,
+      colorings = Map.empty
+    )
+  }
+
   val socialNetwork: Graph[String] = Map(
     "Alice" -> Set("Bob", "Charlie", "David"),
     "Bob" -> Set(),
@@ -79,4 +104,7 @@ object GraphProblems extends App {
 
   println("makeUndirected")
   println(makeUndirected(socialNetwork))
+
+  println("color")
+  println(color(socialNetwork))
 }
